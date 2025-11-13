@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET() {
   try {
     await connectToDatabase();
-    const videos = await Video.find({}).sort({ createdAt: -1 }).lean();
+    const videos = await Video.find({}).sort({ createdAt: -1 }).lean();//lean method is used to get plain javascript objects instead of mongoose documents
 
     if (!videos || videos.length === 0) {
       return NextResponse.json([], { status: 200 });
