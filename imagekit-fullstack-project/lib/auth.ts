@@ -1,3 +1,4 @@
+// lib/auth.ts (or wherever you keep it)
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectToDatabase } from "./db";
@@ -10,37 +11,47 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "passsword" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        // defensive: must exist
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Missing email or passsword");
+          // return null for invalid auth (don't throw)
+          return null;
         }
 
         try {
           await connectToDatabase();
-          const user = await User.findOne({ email: credentials.email });
+          const user = await User.findOne({ email: credentials.email }).lean();
 
           if (!user) {
-            throw new Error("No user found with this");
+            return null;
           }
 
-          const isValid = await bcrypt.compare(
-            credentials.password,
-            user.passsword
-          );
+          // <-- IMPORTANT: use the correct field name from your DB here.
+          // most schemas call it `user.password` or `user.hashedPassword`.
+          const hashed = (user as any).password; // change 'password' if your schema uses another name
 
+          // defensive check: hashed must be a string
+          if (typeof hashed !== "string" || hashed.length === 0) {
+            console.error("Auth: missing/invalid hashed password for user:", user.email);
+            return null;
+          }
+
+          const isValid = await bcrypt.compare(credentials.password, hashed);
           if (!isValid) {
-            throw new Error("invalid password");
+            return null;
           }
 
+          // successful login
           return {
             id: user._id.toString(),
             email: user.email,
           };
-        } catch (error) {
-          console.error("Auth error: ", error);
-          throw error;
+        } catch (err) {
+          console.error("Auth error:", err);
+          // return null to indicate failure (avoid throwing)
+          return null;
         }
       },
     }),
@@ -48,7 +59,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
+        token.id = (user as any).id;
       }
       return token;
     },
