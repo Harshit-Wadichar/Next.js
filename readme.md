@@ -1,4 +1,4 @@
-# Next.js + Node.js — README
+# Next.js  — README
 
 > A concise guide covering API routes, dynamic routes, environment variables, layouts, middleware, NextAuth, next/navigation, Server Actions, SSR/SSG/ISR, styles, and caching in Next.js — with examples and best practices.
 
